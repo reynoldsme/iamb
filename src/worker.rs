@@ -440,7 +440,7 @@ async fn refresh_rooms(client: &Client, store: &AsyncProgramStore) {
     let mut dms = vec![];
 
     for room in client.invited_rooms().into_iter() {
-        let name = room.display_name().await.unwrap_or(DisplayName::Empty).to_string();
+        let name = room.compute_display_name().await.unwrap_or(DisplayName::Empty).to_string();
         let tags = room.tags().await.unwrap_or_default();
 
         names.push((room.room_id().to_owned(), name));
@@ -455,7 +455,7 @@ async fn refresh_rooms(client: &Client, store: &AsyncProgramStore) {
     }
 
     for room in client.joined_rooms().into_iter() {
-        let name = room.display_name().await.unwrap_or(DisplayName::Empty).to_string();
+        let name = room.compute_display_name().await.unwrap_or(DisplayName::Empty).to_string();
         let tags = room.tags().await.unwrap_or_default();
 
         names.push((room.room_id().to_owned(), name));
@@ -1346,7 +1346,7 @@ impl ClientWorker {
 
     async fn get_room(&mut self, room_id: OwnedRoomId) -> IambResult<FetchedRoom> {
         if let Some(room) = self.client.get_room(&room_id) {
-            let name = room.display_name().await.map_err(IambError::from)?;
+            let name = room.compute_display_name().await.map_err(IambError::from)?;
             let tags = room.tags().await.map_err(IambError::from)?;
 
             Ok((room, name, tags))

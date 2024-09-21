@@ -4,13 +4,15 @@ use matrix_sdk::{
     notification_settings::{IsEncrypted, IsOneToOne, NotificationSettings, RoomNotificationMode},
     room::Room as MatrixRoom,
     ruma::{
-        api::client::push::get_notifications::v3::Notification,
+        api::client::push::get_notifications::v3::Notification as RumaNotification, // Alias for ruma::Notification
         events::{room::message::MessageType, AnyMessageLikeEventContent, AnySyncTimelineEvent},
         MilliSecondsSinceUnixEpoch,
         RoomId,
     },
+    sync::Notification as MatrixNotification, // Use a distinct alias for matrix_sdk::sync::Notification
     Client,
 };
+
 use unicode_segmentation::UnicodeSegmentation;
 
 use crate::{
@@ -172,12 +174,11 @@ async fn is_visible_room(store: &AsyncProgramStore, room_id: &RoomId) -> bool {
 }
 
 pub async fn parse_notification(
-    notification: Notification,
+    notification: MatrixNotification,
     room: MatrixRoom,
     show_body: bool,
 ) -> IambResult<(String, Option<String>, MilliSecondsSinceUnixEpoch)> {
     let event = notification.event.deserialize().map_err(IambError::from)?;
-
     let server_ts = event.origin_server_ts();
 
     let sender_id = event.sender();
@@ -188,7 +189,7 @@ pub async fn parse_notification(
         .and_then(|m| m.display_name())
         .unwrap_or_else(|| sender_id.localpart());
 
-    let summary = if let Ok(room_name) = room.display_name().await {
+    let summary = if let Ok(room_name) = room.compute_display_name().await {
         format!("{sender_name} in {room_name}")
     } else {
         sender_name.to_string()
